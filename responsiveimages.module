@@ -1,0 +1,172 @@
+<?php
+
+ /*
+ * Implements hook_theme_registry_alter
+ */
+function responsiveimages_theme_registry_alter(&$theme_registry) {
+   if (isset($theme_registry['image'])) {
+    $theme_registry['image']['function'] = 'responsiveimages_image';
+  }
+  return $theme_registry;
+}
+ 
+ /**
+ * Override theme_image
+ */
+function responsiveimages_image($variables) {
+
+    //srcset
+    $source = file_create_url($variables['path']);
+ 
+    $srcset = get_srcset_for_image($source);    
+    if ($srcset) $variables['attributes']['srcset'] = $srcset;
+  
+    //sizes 
+    $imageclass="";
+    if (array_key_exists('class', $variables['attributes'])) {
+        
+        $classes = explode(" ", $variables['attributes']['class']);
+
+        $sizes = get_sizes_for_image($classes);
+        if (strlen($sizes)) $variables['attributes']['sizes'] = $sizes;
+    }
+
+    $attributes = $variables['attributes'];
+
+    foreach (array('width', 'height', 'alt', 'title') as $key) {
+
+        if (isset($variables[$key])) {
+          $attributes[$key] = $variables[$key];
+        }
+    }
+
+    //drupal_set_message('<pre>' . print_r(drupal_attributes($attributes), true) . '</pre>');
+ 
+    return '<img' . drupal_attributes($attributes) . ' />';
+    
+  /*}
+  else {
+    theme_image($variables);
+  }*/
+}
+
+function get_sizes_for_image($classes) {
+
+    $sizes = "";   
+
+    foreach ($classes as $class) {
+        if (strpos($class, "image-")!==false) {
+            $class = $class;
+            break;
+        }
+    }
+
+    if (strlen($class)==0) return $sizes;
+
+    switch($class) {
+        
+        case 'image-breves':
+        $sizes="(min-width: 64em) 11.11vw";
+        break;
+        
+        case 'image-logo':
+        case 'image-projet':
+        case 'image-touslesprojets':
+        //case 'image-taxonomyterm':
+        case 'image-services':
+        case 'image-evenements':
+        $sizes="(min-width: 64em) 25vw, 50vw";
+        break;
+    
+        case 'image-agauche':
+        $sizes="(min-width: 40em) 50vw, 100vw"; 
+        break;
+        
+        case 'image-adroite':
+        $sizes="(min-width: 40em) 50vw, 100vw"; 
+        break;
+              
+        case 'image-centree':
+        $sizes="(min-width: 40em) 50vw, 100vw"; 
+        break;
+          
+        case 'image-panoramic':
+        default:
+        $sizes="100vw";
+        break;
+    }
+    
+    return $sizes;
+}
+
+function get_srcset_for_image($source) {
+    
+    $srcset = array();
+    
+     //remove itok from source
+    $arr = explode("?", $source);
+    $source = $arr[0];
+      
+    //remove base
+    $source = str_replace($GLOBALS['base_url'] .'/', '', $source);
+    
+    $file_name = drupal_basename($source);
+    
+    $dest_basepath = variable_get('file_public_path', conf_path() . '/files'); 
+  
+    $dest =  $dest_basepath . '/styles/thumbnail/public/' . $file_name; 
+    if (generate_image($source, $dest, 'thumbnail')) {
+        $srcset[0]['uri']=$dest;  
+        $srcset[0]['width']="160w";  
+        $srcset[0]['multiplier']="1x";
+    }
+
+    $dest =  $dest_basepath . '/styles/small/public/' . $file_name;
+    if (generate_image($source, $dest, 'small')) {
+        $srcset[1]['uri']=$dest;  
+        $srcset[1]['width']="320w";  
+        $srcset[1]['multiplier']="1x";
+    }
+
+    $dest =  $dest_basepath . '/styles/medium/public/' . $file_name;
+    if (generate_image($source, $dest, 'medium')) {
+        $srcset[2]['uri']=$dest;      
+        $srcset[2]['width']="640w";
+        $srcset[2]['multiplier']="1x";
+    }
+
+    $dest =  $dest_basepath . '/styles/large/public/' . $file_name;
+    if (generate_image($source, $dest, 'large')) {
+        $srcset[3]['uri']=$dest;       
+        $srcset[3]['width']="1024w";
+        $srcset[3]['multiplier']="1x";
+    }
+    
+    if (!empty($srcset)) {
+        $srcsetitems = array();
+        foreach ($srcset as $src) {
+          // URI is mandatory.
+          $source = file_create_url($src['uri']);
+          if (isset($src['width']) && !empty($src['width'])) {
+            $source .= ' ' . $src['width'];
+          }
+          elseif (isset($src['multiplier']) && !empty($src['multiplier'])) {
+            $source .= ' ' . $src['multiplier'];
+          }
+          $srcsetitems[] = $source;
+        }
+        
+        return implode(', ', $srcsetitems);
+    }
+
+    return false;
+}
+
+function generate_image($source, $dest, $styles) {
+    if (!file_exists($dest)) {
+        $display_style = image_style_load($styles);
+        return image_style_create_derivative($display_style, $source, $dest);
+    }
+    else return true;
+}
+?>
