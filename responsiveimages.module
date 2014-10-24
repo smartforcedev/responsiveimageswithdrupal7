@@ -22,7 +22,6 @@ function responsiveimages_image($variables) {
     if ($srcset) $variables['attributes']['srcset'] = $srcset;
   
     //sizes 
-    $imageclass="";
     if (array_key_exists('class', $variables['attributes'])) {
         
         $classes = explode(" ", $variables['attributes']['class']);
@@ -40,14 +39,7 @@ function responsiveimages_image($variables) {
         }
     }
 
-    //drupal_set_message('<pre>' . print_r(drupal_attributes($attributes), true) . '</pre>');
- 
     return '<img' . drupal_attributes($attributes) . ' />';
-    
-  /*}
-  else {
-    theme_image($variables);
-  }*/
 }
 
 function get_sizes_for_image($classes) {
